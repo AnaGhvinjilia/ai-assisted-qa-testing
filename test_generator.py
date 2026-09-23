@@ -1,35 +1,59 @@
-def generate_test_scenarios(requirement):
-    scenarios = {
-        "Positive Tests": [
-            f"Verify the user can successfully complete: {requirement}",
-            "Verify the expected result is displayed after successful completion."
-        ],
-        "Negative Tests": [
-            "Verify the system handles invalid input correctly.",
-            "Verify the system displays a clear error message when the action fails."
-        ],
-        "Edge Cases": [
-            "Verify behavior with empty or missing input.",
-            "Verify behavior with maximum allowed input values.",
-            "Verify repeated user actions do not cause unexpected behavior."
-        ],
-        "Usability Checks": [
-            "Verify instructions and messages are clear to the user.",
-            "Verify the user can understand what to do after an error occurs."
-        ]
-    }
+import os
+import requests
 
-    return scenarios
+TOKEN = os.getenv("GITHUB_TOKEN")
 
+if not TOKEN:
+    raise ValueError("GITHUB_TOKEN environment variable is not set.")
+
+url = "https://models.github.ai/inference/chat/completions"
+
+headers = {
+    "Authorization": f"Bearer {TOKEN}",
+    "Content-Type": "application/json"
+}
 
 requirement = input("Enter a product requirement: ")
 
-results = generate_test_scenarios(requirement)
+prompt = f"""
+You are a Senior QA Engineer.
 
-print("\nGenerated QA Test Scenarios:\n")
+Analyze the following product requirement:
 
-for category, tests in results.items():
-    print(category)
-    for test in tests:
-        print(f"- {test}")
-    print()
+{requirement}
+
+Generate concise QA test scenarios in these categories:
+
+1. Positive Tests
+2. Negative Tests
+3. Edge Cases
+4. API Checks
+5. Usability Checks
+
+Focus on realistic risks and avoid generic test cases.
+"""
+
+data = {
+    "model": "openai/gpt-4.1-mini",
+    "messages": [
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ],
+    "temperature": 0.3
+}
+
+response = requests.post(
+    url,
+    headers=headers,
+    json=data,
+    timeout=30
+)
+
+response.raise_for_status()
+
+result = response.json()
+
+print("\n--- AI Generated QA Test Scenarios ---\n")
+print(result["choices"][0]["message"]["content"])
